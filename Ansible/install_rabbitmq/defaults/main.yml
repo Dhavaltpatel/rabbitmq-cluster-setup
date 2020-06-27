@@ -1,0 +1,38 @@
+rabbitmq_major: 3
+rabbitmq_minor: 8
+rabbitmq_patch: 3
+rabbitmq_release: "*"
+rabbitmq_package: "{{rabbitmq_major}}.{{rabbitmq_minor}}.{{rabbitmq_patch}}-{{rabbitmq_release}}"
+rabbitmq_repository_on_satellite:
+erlang_packages_state: present 
+
+rabbitmq_erlang_cookie_file: /var/lib/rabbitmq/.erlang.cookie
+rabbitmq_os_package: false
+rabbitmq_config_file_path: /etc/rabbitmq/rabbitmq.config
+
+rabbitmq_service_d_path: /etc/systemd/system/rabbitmq-server.service.d
+rabbitmq_system_number_open_files: 65535
+
+rabbitmq_enabled_plugins_file_path: "/etc/rabbitmq/enabled_plugins"
+rabbitmq_enabled_plugins_file_owner: root
+rabbitmq_enabled_plugins_file_group: rabbitmq
+rabbitmq_enabled_plugins_file_mode: 0644
+
+rabbitmq_env_variables_file_path: "/etc/rabbitmq/rabbitmq-env.conf"
+rabbitmq_config_file_owner: root
+rabbitmq_config_file_group: rabbitmq
+rabbitmq_config_file_mode: 0644
+
+rabbitmq_conf_disk_free_limit_mem_relative: 0.4
+rabbitmq_conf_vm_memory_high_watermark: 0.4
+
+rabbitmq_conf_tcp_listeners_address: ''
+rabbitmq_conf_tcp_listeners_port: 5672
+
+rabbitmq_users_remove:
+  - guest
+
+rabbitmq_users:
+  - 
+
+rabbitmq_administrator_tag: administrator

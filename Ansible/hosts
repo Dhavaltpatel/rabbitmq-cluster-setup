@@ -1,0 +1,19 @@
+[node1]
+rabbit-node1 ansible_ssh_host=<ip>
+
+[node2]
+rabbit-node2 ansible_ssh_host=<ip>
+
+[node3]
+rabbit-node3 ansible_ssh_host=<ip>
+
+[all_group]
+rabbit-node1
+rabbit-node2
+rabbit-node3
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_user=ubuntu
+ansible_private_key_file=<key path>
+ansible_ssh_extra_args='-o StrictHostKeyChecking=no'

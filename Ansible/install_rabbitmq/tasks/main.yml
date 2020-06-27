@@ -1,0 +1,91 @@
+---
+- name: Install prerequisites
+  apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  with_items:
+   # - apt-transport-https
+   # - ca-certificates
+   # - python3-pip
+   - curl
+   - software-properties-common
+
+- name: "add the official rabbitmq repository's key"
+  apt_key:
+    url: "https://www.rabbitmq.com/rabbitmq-release-signing-key.asc"
+    state: present
+  when: not rabbitmq_os_package
+
+- name: Add RabbitMQ APT repository
+  apt_repository:
+    repo: 'deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang-22.x'
+    state: present
+
+- name: Install RabbitMQ
+  apt:
+    deb: "https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.8.3/rabbitmq-server_3.8.3-1_all.deb"
+
+- name: enable rabbitmq plugins
+  rabbitmq_plugin:
+    names: rabbitmq_management,rabbitmq_tracing,rabbitmq_federation,rabbitmq_shovel,rabbitmq_shovel_management
+    state: enabled
+  notify:
+  - rabbitmq restart
+
+- name: ensure the users are removed
+  rabbitmq_user:
+    user={{ item }}
+    state=absent
+  with_items: "{{ rabbitmq_users_remove }}"
+
+- name: ensure users exist
+  rabbitmq_user:
+    user: "{{ item }}"
+    password: qwerty
+    vhost: /
+    configure_priv: .*
+    read_priv: .*
+    write_priv: .*
+    tags: "{{ rabbitmq_administrator_tag }}"
+    state: present
+  with_items: "{{ rabbitmq_users }}"
+
+- name: Check if rabbitmq_conf_vm_memory_high_watermark is under the recommended range
+  fail:
+    msg: "The recommended vm_memory_high_watermark range is 0.4 to 0.66."
+  when: rabbitmq_conf_vm_memory_high_watermark < 0.4 or rabbitmq_conf_vm_memory_high_watermark > 0.66
+
+- name: copy the rabbitmq configuration file
+  template:
+    src=rabbitmq.config.j2
+    dest={{ rabbitmq_config_file_path }}
+    owner={{ rabbitmq_config_file_owner }}
+    group={{ rabbitmq_config_file_group }}
+    mode={{ rabbitmq_config_file_mode }}
+    backup=yes
+
+- name: alter number of system's open file if rabbitmq_system_number_open_files is set
+  block:
+    - name: check if value is under 500k
+      fail:
+        msg: "The number of open files in the system should not exceed 500K."
+      when: rabbitmq_system_number_open_files > 500000
+
+    - name: make sure service.d exists
+      file:
+        path: "{{ rabbitmq_service_d_path }}"
+        state: directory
+
+    - name: change limit of system's number of open file
+      template:
+        src: limits.conf.j2
+        dest: "{{ rabbitmq_service_d_path }}/limits.conf"
+        backup: true
+  when: rabbitmq_system_number_open_files is defined
+
+- name: ensure rabbitmq server is running
+  service:
+    name: rabbitmq-server
+    daemon_reload: true #changed systemd conf file
+    state: started 

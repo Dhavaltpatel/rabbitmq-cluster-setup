@@ -1,0 +1,64 @@
+---
+- name: stopping rabbitmq app
+  command: rabbitmqctl stop_app
+
+- name: resetting rabbitmq
+  command: rabbitmqctl reset
+
+- name: stopping rabbitmq-server
+  service: name=rabbitmq-server state=stopped
+
+- name: copy erlang cookie
+  template:
+    src: erlang.cookie.j2
+    dest: "{{ rabbitmq_erlang_cookie_file }}"
+    owner: rabbitmq
+    group: rabbitmq
+    mode: 0400
+    backup: yes
+
+- name: restarting rabbitmq-server on master
+  service: name=rabbitmq-server state=started
+  when: inventory_hostname == "rabbit-node1" 
+
+- name: starting rabbitmq app on master
+  command: rabbitmqctl start_app
+  register: cluster_master
+  when: inventory_hostname == "rabbit-node1"
+
+- name: sending sigterm to any running rabbitmq processes
+  shell: pkill -u rabbitmq || true
+  when: inventory_hostname != "rabbit-node1"
+
+- name: restarting rabbitmq-server
+  service: name=rabbitmq-server state=restarted
+  when: inventory_hostname != "rabbit-node1"
+
+- name: stopping rabbitmq app
+  command: rabbitmqctl stop_app
+  when: inventory_hostname != "rabbit-node1"
+
+- name: resetting rabbitmq app
+  command: rabbitmqctl reset
+  when: inventory_hostname != "rabbit-node1"
+
+- name: joining rabbitmq node to cluster
+  command: rabbitmqctl join_cluster rabbit@rabbit-node1
+  register: cluster_joined
+  when: inventory_hostname != "rabbit-node1"
+  retries: 2
+  delay: 1
+
+- name: starting rabbitmq app
+  command: rabbitmqctl start_app
+  when: inventory_hostname != "rabbit-node1"
+
+- name: getting cluster_status
+  command: rabbitmqctl cluster_status
+  register: cluster_status
+
+- debug: var=cluster_status.stdout_lines
+
+- name: setting policy that allows for queues mirroring to all nodes in the cluster
+  command: rabbitmqctl set_policy ha-all "." '{"ha-mode":"all"}'
+ 

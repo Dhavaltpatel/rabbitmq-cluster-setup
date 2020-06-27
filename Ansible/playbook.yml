@@ -1,0 +1,21 @@
+---
+- name: deploy RabbitMQ and setup the environment
+  hosts:
+    - all_group
+  #gather_facts: False
+  user: ubuntu
+  become: yes
+
+  roles:
+    - set_hostname
+    - install_rabbitmq
+
+- name: Configure RabbitMQ Cluster
+  hosts:
+    - all_group
+  user: ubuntu
+  become: yes
+  roles:
+    - cluster_setup
+
+ 
